@@ -559,6 +559,46 @@ app.post('/sprints/:id/capacity', ensureAuth, ensureAdmin, async (req, res) => {
 });
 
 // Usuários
+app.get('/users/me', (req, res, next) => {
+  // Middleware customizado para não redirecionar requisições JSON
+  if (!req.session?.token) {
+    return res.status(401).json({ error: 'Não autenticado. Faça login novamente.' });
+  }
+  next();
+}, async (req, res) => {
+  try {
+    const api = apiClient(req.session.token, req.session.tz);
+    const response = await api.get('/users/me');
+    
+    if (!response || !response.data) {
+      return res.status(500).json({ error: 'Resposta inválida da API' });
+    }
+    
+    res.json(response.data);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    let msg = 'Erro desconhecido';
+    
+    if (err.response?.status === 404) {
+      msg = 'Endpoint não encontrado na API. Verifique se a API está rodando em http://localhost:3000';
+    } else if (err.response?.status === 401) {
+      msg = 'Token inválido ou expirado. Faça login novamente.';
+    } else if (err.code === 'ECONNREFUSED') {
+      msg = 'Não foi possível conectar à API. Verifique se está rodando em http://localhost:3000';
+    } else if (err.response?.data) {
+      if (Array.isArray(err.response.data)) {
+        msg = err.response.data[0]?.message || err.response.data[0]?.code || 'Erro na API';
+      } else {
+        msg = err.response.data.message || err.response.data.error || 'Erro na API';
+      }
+    } else if (err.message) {
+      msg = err.message;
+    }
+    
+    res.status(status).json({ error: msg });
+  }
+});
+
 app.get('/users', ensureAuth, ensureAdmin, async (req, res) => {
   try {
     const api = apiClient(req.session.token, req.session.tz);
