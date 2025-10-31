@@ -134,10 +134,11 @@ components:
           items: { type: string }
         capacity:
           type: object
+          description: Capacidade de QAs por nível. Opcional - se não fornecido, todos os valores serão 0.
           properties:
-            junior: { type: integer }
-            pleno: { type: integer }
-            senior: { type: integer }
+            junior: { type: integer, default: 0 }
+            pleno: { type: integer, default: 0 }
+            senior: { type: integer, default: 0 }
     Sprint:
       type: object
       properties:

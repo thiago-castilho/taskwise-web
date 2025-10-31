@@ -23,7 +23,9 @@
         <% } %>
       </div>
       <div class="navbar-end">
-        <div class="navbar-item">Olá, <strong><%= currentUser.name %></strong> (<%= currentUser.role %>)</div>
+        <div class="navbar-item has-text-white">
+          Olá,&nbsp;<strong class="has-text-white has-text-weight-semibold"><%= currentUser.name %></strong> (<span class="has-text-white"><%= currentUser.role %></span>)
+        </div>
         <div class="navbar-item">
           <form method="post" action="/logout">
             <button class="button is-light" type="submit">Sair</button>
@@ -56,11 +58,9 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tz: tz })
-          }).catch(() => {}); // Ignora erros silenciosamente
+          }).catch(() => {});
         }
-      } catch (e) {
-        // Ignora se não conseguir detectar timezone
-      }
+      } catch (e) {}
     })();
   </script>
 

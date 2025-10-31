@@ -75,6 +75,9 @@
     <tr>
       <th>Título</th>
       <th>Status</th>
+      <th>Sprint</th>
+      <th>Risco</th>
+      <th>Complexidade</th>
       <th>Total (h)</th>
       <th>Total (dias)</th>
       <th>Entrega Prevista</th>
@@ -86,10 +89,25 @@
       <tr>
         <td><%= t.title %></td>
         <td><%= t.status %></td>
+        <td>
+          <% var sprintName='-'; if (t.sprintId) { for (var i=0;i<(sprints||[]).length;i++){ if (sprints[i].id===t.sprintId){ sprintName=sprints[i].name; break; } } } %>
+          <%= sprintName %>
+        </td>
+        <td><%= t.risco || '-' %></td>
+        <td><%= t.complexidade || '-' %></td>
         <td><%= t.totalHours %></td>
         <td><%= t.totalDays %></td>
         <td><%= t.dueDate || (t.status==='Backlog' ? 'Tarefa ainda não iniciada' : '') %></td>
-        <td><a class="button is-small" href="/tasks/<%= t.id %>">Abrir</a></td>
+        <td>
+          <div class="buttons" style="gap: 0.25rem;">
+            <a class="button is-small" href="/tasks/<%= t.id %>">Abrir</a>
+            <% if (currentUser && currentUser.role==='Admin') { %>
+              <form method="post" action="/tasks/<%= t.id %>/delete" onsubmit="return confirm('Confirma excluir esta tarefa?')" style="display:inline;">
+                <button class="button is-small is-danger" type="submit">Excluir</button>
+              </form>
+            <% } %>
+          </div>
+        </td>
       </tr>
     <% }) %>
   </tbody>

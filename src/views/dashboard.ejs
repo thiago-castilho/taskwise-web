@@ -62,30 +62,10 @@
     </div>
   </div>
 
-  <% if (summary.tarefas_sem_sprint) { %>
-  <div class="box">
-    <h2 class="title is-5">Tarefas sem Sprint (<%= summary.tarefas_sem_sprint.total || summary.tarefas_sem_sprint.length || 0 %>)</h2>
-    <table class="table is-fullwidth">
-      <thead>
-        <tr><th>ID</th><th>Título</th><th>Idade (dias)</th></tr>
-      </thead>
-      <tbody>
-        <% (summary.tarefas_sem_sprint.items || summary.tarefas_sem_sprint || []).forEach(t => { %>
-          <tr>
-            <td><%= t.id %></td>
-            <td><%= t.title %></td>
-            <td><%= t.idade_dias %></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-  <% } %>
-
   <div class="columns">
-    <div class="column is-half">
-      <div class="box">
-        <h2 class="title is-5">Tarefas por Status</h2>
+    <div class="column is-half is-flex">
+      <div class="box is-flex-grow-1">
+        <h2 class="title is-5">Tarefas por Status <span class="is-size-7 has-text-grey ml-2">(<%= selectedSprint ? selectedSprint.name : '' %>)</span></h2>
         <table class="table is-fullwidth">
           <thead>
             <tr><th>Status</th><th>Qtde</th></tr>
@@ -98,9 +78,9 @@
         </table>
       </div>
     </div>
-    <div class="column is-half">
-      <div class="box">
-        <h2 class="title is-5">Tarefas Bloqueadas</h2>
+    <div class="column is-half is-flex">
+      <div class="box is-flex-grow-1">
+        <h2 class="title is-5">Tarefas Bloqueadas <span class="is-size-7 has-text-grey ml-2">(<%= selectedSprint ? selectedSprint.name : '' %>)</span></h2>
         <% if (!summary.bloqueadas || summary.bloqueadas.length === 0) { %>
           <p>Nenhuma bloqueada.</p>
         <% } else { %>
@@ -123,6 +103,25 @@
       </div>
     </div>
   </div>
+
+  <% if (summary.tarefas_sem_sprint) { %>
+  <div class="box">
+    <h2 class="title is-5">Tarefas sem Sprint (<%= summary.tarefas_sem_sprint.total || summary.tarefas_sem_sprint.length || 0 %>)</h2>
+    <table class="table is-fullwidth">
+      <thead>
+        <tr><th>ID</th><th>Título</th><th>Status</th><th>Idade (dias)</th></tr>
+      </thead>
+      <tbody>
+        <% (summary.tarefas_sem_sprint.items || summary.tarefas_sem_sprint || []).forEach(t => { %>
+          <tr>
+            <td><%= t.id %></td>
+            <td><%= t.title %></td>
+            <td><%= t.status || '-' %></td>
+            <td><%= t.idade_dias %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
 <% } %>
-
-
