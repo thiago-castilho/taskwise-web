@@ -1,0 +1,109 @@
+<div class="level">
+  <div class="level-left">
+    <h1 class="title">Tarefas</h1>
+  </div>
+  <div class="level-right">
+    <a href="/tasks/new" class="button is-primary">Nova Tarefa</a>
+  </div>
+</div>
+
+<form class="box" method="get" action="/tasks">
+  <div class="columns is-multiline">
+    <div class="column is-2">
+      <label class="label">Status</label>
+      <div class="select is-fullwidth">
+        <select name="status">
+          <option value="">Todos</option>
+          <%- ['Backlog','Em Andamento','Bloqueada','Concluída'].map(s => `<option ${filters.status===s?'selected':''}>${s}</option>`).join('') %>
+        </select>
+      </div>
+    </div>
+    <div class="column is-3">
+      <label class="label">Sprint</label>
+      <div class="select is-fullwidth">
+        <select name="sprintId">
+          <option value="">Todas</option>
+          <% (sprints||[]).forEach(s => { %>
+            <option value="<%= s.id %>" <%= (filters.sprintId===s.id)?'selected':'' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="column is-2">
+      <label class="label">Risco</label>
+      <div class="select is-fullwidth">
+        <select name="risco">
+          <option value="">Todos</option>
+          <% const riskOpts = typeof riskOptions !== 'undefined' ? riskOptions : ['Baixo','Médio','Alto']; %>
+          <% riskOpts.forEach(r => { %>
+            <option value="<%= r %>" <%= (filters.risco===r)?'selected':'' %>><%= r %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="column is-2">
+      <label class="label">Complexidade</label>
+      <div class="select is-fullwidth">
+        <select name="complexidade">
+          <option value="">Todas</option>
+          <% const complexityOpts = typeof complexityOptions !== 'undefined' ? complexityOptions : ['Baixa','Média','Alta']; %>
+          <% complexityOpts.forEach(c => { %>
+            <option value="<%= c %>" <%= (filters.complexidade===c)?'selected':'' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="column is-3">
+      <label class="label">Responsável</label>
+      <div class="select is-fullwidth">
+        <select name="assigneeId">
+          <option value="">Todos</option>
+          <% (users||[]).forEach(u => { %>
+            <option value="<%= u.id %>" <%= (filters.assigneeId===u.id)?'selected':'' %>><%= u.name %> - <%= u.email %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped is-justify-content-flex-end">
+    <div class="control"><button class="button is-link" type="submit">Filtrar</button></div>
+  </div>
+</form>
+
+<table class="table is-fullwidth is-striped">
+  <thead>
+    <tr>
+      <th>Título</th>
+      <th>Status</th>
+      <th>Total (h)</th>
+      <th>Total (dias)</th>
+      <th>Entrega Prevista</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (data.items||[]).forEach(t => { %>
+      <tr>
+        <td><%= t.title %></td>
+        <td><%= t.status %></td>
+        <td><%= t.totalHours %></td>
+        <td><%= t.totalDays %></td>
+        <td><%= t.dueDate || (t.status==='Backlog' ? 'Tarefa ainda não iniciada' : '') %></td>
+        <td><a class="button is-small" href="/tasks/<%= t.id %>">Abrir</a></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<nav class="pagination" role="navigation" aria-label="pagination">
+  <% const page = data.page||1; const totalPages = data.totalPages||1; %>
+  <a class="pagination-previous <%= page<=1?'is-disabled':'' %>" href="?page=<%= Math.max(1,page-1) %>">Anterior</a>
+  <a class="pagination-next <%= page>=totalPages?'is-disabled':'' %>" href="?page=<%= Math.min(totalPages,page+1) %>">Próxima</a>
+  <ul class="pagination-list">
+    <% for (let p=1;p<=totalPages;p++){ %>
+      <li><a class="pagination-link <%= p===page?'is-current':'' %>" href="?page=<%= p %>"><%= p %></a></li>
+    <% } %>
+  </ul>
+  </nav>
+
+

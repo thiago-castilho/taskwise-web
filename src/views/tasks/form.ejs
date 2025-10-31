@@ -1,0 +1,193 @@
+<h1 class="title"><%= task ? 'Editar Tarefa' : 'Nova Tarefa' %></h1>
+
+<form method="post" action="<%= task ? '/tasks/' + task.id : '/tasks' %>">
+  <div class="field">
+    <label class="label">Título</label>
+    <input class="input" name="title" required value="<%= task ? task.title : '' %>" />
+  </div>
+  <div class="field">
+    <label class="label">Descrição</label>
+    <textarea class="textarea" name="description"><%= task ? (task.description||'') : '' %></textarea>
+  </div>
+  <div class="columns">
+    <div class="column">
+      <label class="label">Sprint</label>
+      <div class="select is-fullwidth">
+        <select name="sprintId">
+          <option value="">Nenhuma</option>
+          <% (sprints||[]).forEach(s => { %>
+            <option value="<%= s.id %>" <%= (task && task.sprintId===s.id)?'selected':'' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="column">
+      <label class="label">Risco</label>
+      <div class="select is-fullwidth">
+        <select name="risco">
+          <option value="">Selecione</option>
+          <% (riskOptions||['Baixo','Médio','Alto']).forEach(r => { %>
+            <option value="<%= r %>" <%= (task && task.risco===r)?'selected':'' %>><%= r %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="column">
+      <label class="label">Complexidade</label>
+      <div class="select is-fullwidth">
+        <select name="complexidade">
+          <option value="">Selecione</option>
+          <% (complexityOptions||['Baixa','Média','Alta']).forEach(c => { %>
+            <option value="<%= c %>" <%= (task && task.complexidade===c)?'selected':'' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="title is-5">Fases (O/M/P em horas decimais)</h2>
+  <div class="columns is-multiline">
+    <% const phases = task ? task.phases : {}; %>
+    <% const rows = [
+      { key: 'analiseModelagem', label: 'Análise e Modelagem', p: phases.analiseModelagem||{} },
+      { key: 'execucao', label: 'Execução', p: phases.execucao||{} },
+      { key: 'reteste', label: 'Reteste', p: phases.reteste||{} },
+      { key: 'documentacao', label: 'Documentação', p: phases.documentacao||{} }
+    ]; %>
+    <% rows.forEach(r => { %>
+      <div class="column is-full">
+        <label class="label"><%= r.label %></label>
+        <div class="fields is-grouped">
+          <div class="control mr-2">
+            <input class="input" type="number" step="0.1" min="0.0" name="<%= r.key==='analiseModelagem'?'am_O':r.key==='execucao'?'ex_O':r.key==='reteste'?'re_O':'do_O' %>" placeholder="O" value="<%= r.p.O||'' %>">
+          </div>
+          <div class="control mr-2">
+            <input class="input" type="number" step="0.1" min="0.0" name="<%= r.key==='analiseModelagem'?'am_M':r.key==='execucao'?'ex_M':r.key==='reteste'?'re_M':'do_M' %>" placeholder="M" value="<%= r.p.M||'' %>">
+          </div>
+          <div class="control mr-2">
+            <input class="input" type="number" step="0.1" min="0.0" name="<%= r.key==='analiseModelagem'?'am_P':r.key==='execucao'?'ex_P':r.key==='reteste'?'re_P':'do_P' %>" placeholder="P" value="<%= r.p.P||'' %>">
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <% if (task) { %>
+    <div class="box">
+      <p><strong>Total (h):</strong> <%= task.totalHours %> | <strong>Total (dias):</strong> <%= task.totalDays %> | <strong>Entrega Prevista:</strong> <%= task.dueDate %></p>
+      <p><strong>Status:</strong> <%= task.status %></p>
+    </div>
+  <% } %>
+
+  <div class="field is-grouped">
+    <div class="control"><button class="button is-primary" type="submit"><%= task ? 'Salvar' : 'Criar' %></button></div>
+    <div class="control"><a class="button" href="/tasks">Voltar</a></div>
+  </div>
+</form>
+
+<% if (task && currentUser && currentUser.role==='Admin') { %>
+  <form method="post" action="/tasks/<%= task.id %>/delete" onsubmit="return confirm('Confirma excluir esta tarefa?')" class="mt-3">
+    <button class="button is-danger" type="submit">Excluir</button>
+  </form>
+<% } %>
+
+<% if (task) { %>
+  <hr/>
+  <h2 class="title is-5 mt-5">Responsável</h2>
+  <form method="post" action="/tasks/<%= task.id %>/assign">
+    <div class="field has-addons">
+      <div class="control is-expanded">
+        <% const usersList = users || []; %>
+        <% if (usersList.length > 0) { %>
+          <div class="select is-fullwidth">
+            <select name="assigneeId">
+              <option value="">Selecione um usuário</option>
+              <% usersList.forEach(u => { %>
+                <option value="<%= u.id %>" <%= (task.assigneeId===u.id)?'selected':'' %>><%= u.name %> - <%= u.email %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } else { %>
+          <input class="input" type="text" name="assigneeId" placeholder="userId" value="<%= task.assigneeId||'' %>">
+          <p class="help is-danger">Não foi possível carregar a lista de usuários. Digite o ID do usuário manualmente.</p>
+        <% } %>
+      </div>
+      <div class="control">
+        <button class="button" type="submit">Definir</button>
+      </div>
+    </div>
+  </form>
+
+  <h2 class="title is-5 mt-5">Status e Bloqueio</h2>
+  <form method="post" action="/tasks/<%= task.id %>/status" onsubmit="return validateBlockForm(this)">
+    <div class="field">
+      <div class="select">
+        <select name="status" id="statusSelect" onchange="toggleBlockFields(this.value)" <%= task && !task.sprintId ? '' : '' %>>
+          <% if (task && !task.sprintId) { %>
+            <option value="Backlog" selected>Backlog</option>
+          <% } else { %>
+            <%- ['Backlog','Em Andamento','Bloqueada','Concluída'].map(s => `<option ${task.status===s?'selected':''}>${s}</option>`).join('') %>
+          <% } %>
+        </select>
+      </div>
+    </div>
+    <% if (task && !task.sprintId) { %>
+      <div class="notification is-warning">Para avançar o status, atribua esta tarefa a uma sprint.</div>
+    <% } %>
+    <input type="hidden" name="currentStatus" value="<%= task.status %>">
+    <div id="blockFields" style="display:none;">
+      <div class="field">
+        <label class="label">Motivo</label>
+        <textarea class="textarea" name="motivo"></textarea>
+      </div>
+      <div class="field">
+        <label class="label">Responsável</label>
+        <% if ((users||[]).length) { %>
+          <div class="select is-fullwidth">
+            <select name="responsavelId">
+              <option value="">Selecione um usuário</option>
+              <% users.forEach(u => { %>
+                <option value="<%= u.id %>"><%= u.name %> - <%= u.email %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } else { %>
+          <input class="input" name="responsavelId" />
+        <% } %>
+      </div>
+    </div>
+    <div class="field">
+      <button class="button is-warning" type="submit">Atualizar Status</button>
+    </div>
+  </form>
+  <script>
+    function toggleBlockFields(val){
+      document.getElementById('blockFields').style.display = (val==='Bloqueada')?'block':'none';
+    }
+    toggleBlockFields(document.getElementById('statusSelect').value);
+    function validateBlockForm(form){
+      // Não enviar se status não mudou e sem bloqueio
+      if (form.currentStatus && form.status.value === form.currentStatus.value) {
+        if (form.status.value !== 'Bloqueada') {
+          alert('Nenhuma alteração de status para atualizar.');
+          return false;
+        }
+      }
+      if (<%= task && !task.sprintId ? 'true' : 'false' %>) {
+        if (form.status.value !== 'Backlog') {
+          alert('Para avançar o status, atribua esta tarefa a uma sprint.');
+          return false;
+        }
+      }
+      if (form.status.value === 'Bloqueada'){
+        if (!form.motivo.value.trim() || !form.responsavelId.value.trim()){
+          alert('Informe motivo e responsável para bloquear.');
+          return false;
+        }
+      }
+      return true;
+    }
+  </script>
+<% } %>
+
+

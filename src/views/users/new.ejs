@@ -1,0 +1,22 @@
+<h1 class="title">Novo Usuário</h1>
+
+<form method="post" action="<%= typeof actionPath !== 'undefined' ? actionPath : '/users' %>">
+  <div class="field">
+    <label class="label">Nome</label>
+    <input class="input" name="name" required />
+  </div>
+  <div class="field">
+    <label class="label">Email</label>
+    <input class="input" type="email" name="email" required />
+  </div>
+  <div class="field">
+    <label class="label">Senha</label>
+    <input class="input" type="password" name="password" required />
+  </div>
+  <div class="field is-grouped">
+    <div class="control"><button class="button is-primary" type="submit">Criar</button></div>
+    <div class="control"><a class="button" href="/users">Cancelar</a></div>
+  </div>
+</form>
+
+

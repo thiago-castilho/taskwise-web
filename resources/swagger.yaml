@@ -1,0 +1,641 @@
+openapi: 3.0.3
+info:
+  title: TaskWise API
+  version: 0.1.0
+  description: API para registro de tarefas e sprints com estimativas PERT
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: Autenticação
+    description: Endpoints de autenticação e gerenciamento de sessão
+  - name: Usuários
+    description: Gerenciamento de usuários do sistema
+  - name: Tarefas
+    description: Operações relacionadas a tarefas de teste
+  - name: Sprints
+    description: Gerenciamento de sprints e ciclos de trabalho
+  - name: Dashboard
+    description: Visualizações e relatórios do dashboard
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        field: { type: string, nullable: true }
+        message: { type: string }
+    ErrorArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/Error'
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            email: { type: string }
+            role: { type: string, enum: [Admin, ReadWrite] }
+    UserCreateRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        password: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [Admin, ReadWrite] }
+        createdAt: { type: string, format: date-time }
+    Phase:
+      type: object
+      required: [O, M, P]
+      properties:
+        O: { type: number, format: float }
+        M: { type: number, format: float }
+        P: { type: number, format: float }
+    TaskCreateRequest:
+      type: object
+      required: [title, phases]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        risco: { type: string }
+        complexidade: { type: string }
+        sprintId: { type: string, nullable: true }
+        phases:
+          type: object
+          properties:
+            analiseModelagem: { $ref: '#/components/schemas/Phase' }
+            execucao: { $ref: '#/components/schemas/Phase' }
+            reteste: { $ref: '#/components/schemas/Phase' }
+            documentacao: { $ref: '#/components/schemas/Phase' }
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [Backlog, Em Andamento, Bloqueada, Concluída] }
+        phases:
+          type: object
+          properties:
+            analiseModelagem: { $ref: '#/components/schemas/Phase' }
+            execucao: { $ref: '#/components/schemas/Phase' }
+            reteste: { $ref: '#/components/schemas/Phase' }
+            documentacao: { $ref: '#/components/schemas/Phase' }
+        totalHours: { type: number, format: float }
+        totalDays: { type: number, format: float }
+        dueDate:
+          type: string
+          format: date-time
+          description: Data de entrega prevista. Definida somente quando o status muda para "Em Andamento"; formato de saída "DD-MM-YYYY HH:mm" respeitando o timezone do usuário.
+        assigneeId: { type: string, nullable: true }
+        sprintId: { type: string, nullable: true }
+        risco: { type: string, nullable: true }
+        complexidade: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Task' }
+    SprintCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        taskIds:
+          type: array
+          items: { type: string }
+        capacity:
+          type: object
+          properties:
+            junior: { type: integer }
+            pleno: { type: integer }
+            senior: { type: integer }
+    Sprint:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [Created, Started, Closed] }
+        taskIds:
+          type: array
+          items: { type: string }
+        capacity:
+          type: object
+          properties:
+            junior: { type: integer }
+            pleno: { type: integer }
+            senior: { type: integer }
+        startedAt: { type: string, format: date-time, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
+        dueDate: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DashboardSummary:
+      type: object
+      properties:
+        sprint_status: { type: string, enum: [Created, Started, Closed] }
+        sprint_iniciada: { type: boolean }
+        dias_sprint: { type: number }
+        progresso_real_percent: { type: number }
+        progresso_esperado_percent: { type: number }
+        status_semaforo: { type: string, enum: [Vermelho, Amarelo, Verde] }
+        tarefas_por_status:
+          type: object
+          additionalProperties: { type: integer }
+        bloqueadas:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              motivo: { type: string }
+              responsavelId: { type: string }
+              idade_do_bloqueio_dias: { type: integer }
+        tarefas_sem_sprint:
+          type: object
+          properties:
+            total: { type: integer }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  status: { type: string, enum: [Backlog, Em Andamento, Bloqueada, Concluída] }
+                  idade_dias: { type: integer }
+  parameters:
+    TimezoneHeader:
+      in: header
+      name: X-Timezone
+      required: false
+      description: Timezone IANA do cliente (ex. America/Sao_Paulo). Se ausente, usa heurística por Accept-Language; fallback UTC.
+      schema:
+        type: string
+        example: America/Sao_Paulo
+    TzQuery:
+      in: query
+      name: tz
+      required: false
+      description: Timezone IANA do cliente via query string (override do header).
+      schema:
+        type: string
+        example: America/Sao_Paulo
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Autenticação
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/LoginResponse' } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '500': { description: Erro interno, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /users:
+    post:
+      tags:
+        - Usuários
+      summary: Criar usuário Read/Write
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserCreateRequest' }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '422': { description: Validação, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '500': { description: Erro interno, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+    get:
+      tags:
+        - Usuários
+      summary: Listar usuários (Admin)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        email: { type: string }
+                        role: { type: string, enum: [Admin, ReadWrite] }
+                        passwordHash: { type: string }
+                        createdAt: { type: string, format: date-time }
+        '403': { description: Proibido (Admin apenas), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /users/available:
+    get:
+      tags:
+        - Usuários
+      summary: Listar usuários disponíveis (para seleção de responsáveis)
+      description: Retorna lista de usuários sem informações sensíveis. Acessível a qualquer usuário autenticado para selecionar responsáveis em tarefas.
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        email: { type: string }
+                        role: { type: string, enum: [Admin, ReadWrite] }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /users/me:
+    get:
+      tags:
+        - Usuários
+      summary: Dados do usuário autenticado
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /tasks:
+    get:
+      tags:
+        - Tarefas
+      summary: Listar tarefas com filtros e paginação
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: sprintId
+          schema: { type: string }
+        - in: query
+          name: risco
+          schema: { type: string }
+        - in: query
+          name: complexidade
+          schema: { type: string }
+        - in: query
+          name: assigneeId
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: pageSize
+          schema: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pagination' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+    post:
+      tags:
+        - Tarefas
+      summary: Criar tarefa
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/TaskCreateRequest' } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+        '422': { description: Validação PERT, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /tasks/{id}:
+    get:
+      tags:
+        - Tarefas
+      summary: Obter tarefa por id
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+    put:
+      tags:
+        - Tarefas
+      summary: Atualizar tarefa (recalcula se fases mudarem)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/TaskCreateRequest' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: Validação PERT, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Reatribuir tarefa já vinculada a outra sprint, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+    delete:
+      tags:
+        - Tarefas
+      summary: Excluir tarefa (Admin)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Excluída }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido (Admin apenas), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /tasks/{id}/status:
+    patch:
+      tags:
+        - Tarefas
+      summary: Alterar status
+      description: Ao alterar o status para "Em Andamento", a API define o campo dueDate automaticamente com base nos dias úteis estimados a partir do momento da transição.
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [Backlog, Em Andamento, Bloqueada, Concluída] }
+                block:
+                  type: object
+                  properties:
+                    motivo: { type: string }
+                    responsavelId: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: Validação/transição (inclui status inválido para tarefas sem sprint), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Concluir sem responsável ou sprint não iniciada para alterar status, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /tasks/{id}/assign/{userId}:
+    patch:
+      tags:
+        - Tarefas
+      summary: Definir responsável pela tarefa
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+        '404': { description: Tarefa não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: Usuário inexistente, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints:
+    get:
+      tags:
+        - Sprints
+      summary: Listar sprints
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/Sprint' } } } } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+    post:
+      tags:
+        - Sprints
+      summary: Criar sprint (Admin)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/SprintCreateRequest' } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '409': { description: Tarefa já vinculada a outra sprint, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido (Admin apenas), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}:
+    get:
+      tags:
+        - Sprints
+      summary: Obter sprint
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}/capacity:
+    patch:
+      tags:
+        - Sprints
+      summary: Definir capacidade de QAs por nível (Admin)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                junior: { type: integer }
+                pleno: { type: integer }
+                senior: { type: integer }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido (Admin apenas), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}/start:
+    patch:
+      tags:
+        - Sprints
+      summary: Iniciar sprint (Admin)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: Sem tarefas para iniciar, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Já iniciada/encerrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}/close:
+    patch:
+      tags:
+        - Sprints
+      summary: Encerrar sprint (Admin)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Não iniciada ou há tarefas não concluídas, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}/tasks:
+    patch:
+      tags:
+        - Sprints
+      summary: Adicionar tarefas a uma sprint (somente Created)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Sprint não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Sprint não editável (já iniciada/encerrada) ou tarefa já vinculada a outra sprint, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: taskIds ausentes, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /sprints/{id}/tasks/remove:
+    patch:
+      tags:
+        - Sprints
+      summary: Remover tarefas de uma sprint (somente Created)
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Sprint' } } } }
+        '404': { description: Sprint não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '409': { description: Sprint não editável (já iniciada/encerrada), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '422': { description: taskIds ausentes ou não pertencem à sprint, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '403': { description: Proibido, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+  /dashboard/summary:
+    get:
+      tags:
+        - Dashboard
+      summary: Resumo do dashboard por sprint
+      parameters:
+        - $ref: '#/components/parameters/TimezoneHeader'
+        - $ref: '#/components/parameters/TzQuery'
+        - in: query
+          name: sprintId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/DashboardSummary' } } } }
+        '404': { description: Sprint não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }
+        '401': { description: Não autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorArray' } } } }

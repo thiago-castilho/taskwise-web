@@ -1,0 +1,128 @@
+<div class="level">
+  <div class="level-left">
+    <h1 class="title">Dashboard da Sprint</h1>
+  </div>
+  <div class="level-right">
+    <div class="select">
+      <form method="get" action="/dashboard">
+        <select name="sprintId" onchange="this.form.submit()">
+          <% (sprints || []).forEach(s => { %>
+            <option value="<%= s.id %>" <%= (selectedSprint && s.id === selectedSprint.id) ? 'selected' : '' %>><%= s.name %> - <%= s.status %></option>
+          <% }) %>
+        </select>
+      </form>
+    </div>
+  </div>
+  </div>
+
+<% if (!selectedSprint) { %>
+  <p>Nenhuma sprint encontrada.</p>
+<% } else if (!summary) { %>
+  <p>Carregando resumo...</p>
+<% } else { %>
+  <% if (!summary.sprint_iniciada) { %>
+    <div class="notification is-warning">Sprint ainda não iniciada</div>
+  <% } %>
+
+  <div class="columns">
+    <div class="column">
+      <div class="box">
+        <p class="heading">Conclusão prevista</p>
+        <p class="title is-5"><%= (selectedSprint && selectedSprint.dueDate) ? selectedSprint.dueDate : '-' %></p>
+        <p class="subtitle is-7">
+          <% if (!summary.sprint_iniciada) { %>
+            Estimativa: -
+          <% } else if (typeof summary.dias_restantes !== 'undefined') { %>
+            <%= summary.dias_restantes %> dias úteis restantes
+          <% } else { %>
+            Estimativa: <%= Math.round(summary.dias_sprint) %> dias úteis
+          <% } %>
+        </p>
+      </div>
+    </div>
+    <div class="column">
+      <div class="box">
+        <p class="heading">Progresso Real</p>
+        <p class="title"><%= summary.progresso_real_percent %>%</p>
+      </div>
+    </div>
+    <div class="column">
+      <div class="box">
+        <p class="heading">Progresso Esperado</p>
+        <p class="title"><%= summary.progresso_esperado_percent %>%</p>
+      </div>
+    </div>
+    <div class="column">
+      <div class="box">
+        <p class="heading">Semáforo</p>
+        <span class="tag is-large <%= summary.status_semaforo === 'Vermelho' ? 'is-danger' : summary.status_semaforo === 'Amarelo' ? 'is-warning' : 'is-success' %>">
+          <%= summary.status_semaforo %>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <% if (summary.tarefas_sem_sprint) { %>
+  <div class="box">
+    <h2 class="title is-5">Tarefas sem Sprint (<%= summary.tarefas_sem_sprint.total || summary.tarefas_sem_sprint.length || 0 %>)</h2>
+    <table class="table is-fullwidth">
+      <thead>
+        <tr><th>ID</th><th>Título</th><th>Idade (dias)</th></tr>
+      </thead>
+      <tbody>
+        <% (summary.tarefas_sem_sprint.items || summary.tarefas_sem_sprint || []).forEach(t => { %>
+          <tr>
+            <td><%= t.id %></td>
+            <td><%= t.title %></td>
+            <td><%= t.idade_dias %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+
+  <div class="columns">
+    <div class="column is-half">
+      <div class="box">
+        <h2 class="title is-5">Tarefas por Status</h2>
+        <table class="table is-fullwidth">
+          <thead>
+            <tr><th>Status</th><th>Qtde</th></tr>
+          </thead>
+          <tbody>
+            <% for (const k in summary.tarefas_por_status) { %>
+              <tr><td><%= k %></td><td><%= summary.tarefas_por_status[k] %></td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="column is-half">
+      <div class="box">
+        <h2 class="title is-5">Tarefas Bloqueadas</h2>
+        <% if (!summary.bloqueadas || summary.bloqueadas.length === 0) { %>
+          <p>Nenhuma bloqueada.</p>
+        <% } else { %>
+          <table class="table is-fullwidth">
+            <thead>
+              <tr><th>Título</th><th>Motivo</th><th>Responsável</th><th>Idade (dias)</th></tr>
+            </thead>
+            <tbody>
+            <% summary.bloqueadas.forEach(b => { %>
+              <tr>
+                <td><%= b.title %></td>
+                <td><%= b.motivo %></td>
+                <td><%= b.responsavelId %></td>
+                <td><%= b.idade_do_bloqueio_dias %></td>
+              </tr>
+            <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+

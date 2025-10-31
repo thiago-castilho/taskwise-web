@@ -1,0 +1,136 @@
+<div class="level mb-4">
+  <div class="level-left">
+    <h1 class="title">Sprint: <%= sprint.name %> (<%= sprint.status %>)</h1>
+  </div>
+  <div class="level-right">
+    <a class="button" href="/sprints">Voltar</a>
+  </div>
+</div>
+
+<div class="box mb-5">
+  <p><strong>ID:</strong> <%= sprint.id %></p>
+  <p><strong>Início:</strong> <%= sprint.startedAt || '-' %> | <strong>Entrega Prevista:</strong> <%= sprint.dueDate || (sprint.status==='Created' ? 'Sprint ainda não iniciada' : '-') %> | <strong>Encerramento:</strong> <%= sprint.closedAt || '-' %></p>
+</div>
+
+<div class="box mb-5">
+  <h2 class="title is-5">Tarefas da Sprint (<%= tasksInSprint.length %>)</h2>
+  <% if (!tasksInSprint.length) { %>
+    <p>Nenhuma tarefa vinculada.</p>
+  <% } else { %>
+    <table class="table is-fullwidth is-striped">
+      <thead>
+        <tr>
+          <th>ID</th><th>Título</th><th>Status</th><th>Total (h)</th><th>Total (dias)</th><th>Entrega Prevista</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% tasksInSprint.forEach(t => { %>
+          <tr>
+            <td><%= t.id %></td>
+            <td><a href="/tasks/<%= t.id %>"><%= t.title %></a></td>
+            <td><%= t.status %></td>
+            <td><%= t.totalHours %></td>
+            <td><%= t.totalDays %></td>
+            <td><%= t.dueDate || (t.status==='Backlog' ? 'Tarefa ainda não iniciada' : '-') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<% if (currentUser && currentUser.role==='Admin') { %>
+  <div class="box">
+    <h2 class="title is-5">Ações da Sprint</h2>
+    <div class="buttons mb-4">
+      <form method="post" action="/sprints/<%= sprint.id %>/start" class="mr-2" style="display:inline-block">
+        <button class="button is-link" <%= sprint.status!=='Created'?'disabled':'' %> type="submit">Iniciar</button>
+      </form>
+      <form method="post" action="/sprints/<%= sprint.id %>/close" style="display:inline-block">
+        <button class="button is-danger" <%= (sprint.status!=='Started' || hasPending)?'disabled':'' %> type="submit" title="<%= hasPending ? 'Existem tarefas não concluídas' : '' %>">Encerrar</button>
+      </form>
+    </div>
+
+    <h3 class="title is-6">Capacidade da Sprint</h3>
+    <p class="mb-4">
+      Informe a quantidade de QAs disponíveis por nível. Taskwise utilizará esses dados para calcular os dias e a data prevista da sprint com base em seus recursos atuais.
+    </p>
+    <form method="post" action="/sprints/<%= sprint.id %>/capacity" class="mt-2">
+      <div class="columns is-multiline is-variable is-4">
+        <div class="column is-3">
+          <div class="field">
+            <label class="label">QAs Júnior</label>
+            <div class="control">
+              <input class="input" type="number" name="junior" step="1" min="0" placeholder="Quantidade de QAs Júnior" value="<%= sprint.capacity?.junior||'' %>">
+            </div>
+            <p class="help">Produtividade: 4.8 horas úteis/dia por QA Júnior</p>
+          </div>
+        </div>
+        <div class="column is-3">
+          <div class="field">
+            <label class="label">QAs Pleno</label>
+            <div class="control">
+              <input class="input" type="number" name="pleno" step="1" min="0" placeholder="Quantidade de QAs Pleno" value="<%= sprint.capacity?.pleno||'' %>">
+            </div>
+            <p class="help">Produtividade: 6.0 horas úteis/dia por QA Pleno</p>
+          </div>
+        </div>
+        <div class="column is-3">
+          <div class="field">
+            <label class="label">QAs Sênior</label>
+            <div class="control">
+              <input class="input" type="number" name="senior" step="1" min="0" placeholder="Quantidade de QAs Sênior" value="<%= sprint.capacity?.senior||'' %>">
+            </div>
+            <p class="help">Produtividade: 7.2 horas úteis/dia por QA Sênior</p>
+          </div>
+        </div>
+        <div class="column is-3">
+          <div class="field">
+            <label class="label">&nbsp;</label>
+            <div class="control">
+              <button class="button is-primary" type="submit">Salvar Capacidade</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <% if (sprint.status==='Created') { %>
+      <h3 class="title is-6 mt-5">Adicionar Tarefas (somente sem Sprint)</h3>
+      <form method="post" action="/sprints/<%= sprint.id %>/tasks" class="mt-3">
+        <div class="field">
+          <div class="select is-multiple is-fullwidth">
+            <select multiple size="8" name="taskIds">
+              <% (tasksWithoutSprint||[]).forEach(t => { %>
+                <option value="<%= t.id %>"><%= t.title %> - <%= t.status %></option>
+              <% }) %>
+            </select>
+          </div>
+          <p class="help">Selecione pelo menos 1 tarefa</p>
+        </div>
+        <div class="field">
+          <button class="button is-primary" type="submit">Adicionar</button>
+        </div>
+      </form>
+
+      <h3 class="title is-6 mt-6">Remover Tarefas desta Sprint</h3>
+      <form method="post" action="/sprints/<%= sprint.id %>/tasks/remove" class="mt-3">
+        <div class="field">
+          <div class="select is-multiple is-fullwidth">
+            <select multiple size="8" name="taskIds">
+              <% (tasksInSprint||[]).forEach(t => { %>
+                <option value="<%= t.id %>"><%= t.title %> - <%= t.status %></option>
+              <% }) %>
+            </select>
+          </div>
+          <p class="help">Selecione as tarefas que deseja remover desta sprint</p>
+        </div>
+        <div class="field">
+          <button class="button is-warning" type="submit">Remover</button>
+        </div>
+      </form>
+    <% } %>
+  </div>
+<% } %>
+
+

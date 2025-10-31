@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'TaskWise' %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="/public/css/app.css">
+</head>
+<body>
+  <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="/dashboard">TaskWise</a>
+    </div>
+    <div class="navbar-menu">
+      <% if (currentUser) { %>
+      <div class="navbar-start">
+        <a class="navbar-item" href="/dashboard">Dashboard</a>
+        <a class="navbar-item" href="/tasks">Tarefas</a>
+        <a class="navbar-item" href="/sprints">Sprints</a>
+        <% if (currentUser && currentUser.role==='Admin') { %>
+          <a class="navbar-item" href="/users">Usuários</a>
+        <% } %>
+      </div>
+      <div class="navbar-end">
+        <div class="navbar-item">Olá, <strong><%= currentUser.name %></strong> (<%= currentUser.role %>)</div>
+        <div class="navbar-item">
+          <form method="post" action="/logout">
+            <button class="button is-light" type="submit">Sair</button>
+          </form>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container">
+      <% if (flash && flash.length) { %>
+        <% flash.forEach(f => { %>
+          <div class="notification is-<%= f.type %>"><%= f.message %></div>
+        <% }) %>
+      <% } %>
+
+      <%- body %>
+    </div>
+  </section>
+
+  <script>
+    // Capturar timezone do navegador e enviar ao servidor (uma vez por sessão)
+    (function() {
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz && tz !== 'UTC') {
+          fetch('/tz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tz: tz })
+          }).catch(() => {}); // Ignora erros silenciosamente
+        }
+      } catch (e) {
+        // Ignora se não conseguir detectar timezone
+      }
+    })();
+  </script>
+
+</body>
+</html>
+
+

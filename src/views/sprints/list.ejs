@@ -1,0 +1,59 @@
+<div class="level">
+  <div class="level-left">
+    <h1 class="title">Sprints</h1>
+  </div>
+</div>
+
+<table class="table is-fullwidth is-striped">
+  <thead>
+    <tr><th>Nome</th><th>Status</th><th>Início</th><th>Entrega Prevista</th><th>Encerramento</th><th>Ações</th></tr>
+  </thead>
+  <tbody>
+    <% (sprints||[]).forEach(s => { %>
+      <tr>
+        <td><a href="/sprints/<%= s.id %>"><%= s.name %></a></td>
+        <td><%= s.status %></td>
+        <td><%= s.startedAt || '-' %></td>
+        <td><%= s.dueDate || (s.status==='Created' ? 'Sprint ainda não iniciada' : '-') %></td>
+        <td><%= s.closedAt || '-' %></td>
+        <td>
+          <% if (currentUser && currentUser.role==='Admin') { %>
+            <form method="post" action="/sprints/<%= s.id %>/start" style="display:inline">
+              <button class="button is-small is-link" <%= s.status!=='Created'?'disabled':'' %> type="submit">Iniciar</button>
+            </form>
+            <form method="post" action="/sprints/<%= s.id %>/close" style="display:inline">
+              <button class="button is-small is-danger" <%= (s.status!=='Started' || (pendingBySprint && pendingBySprint[s.id]))?'disabled':'' %> type="submit" title="<%= (pendingBySprint && pendingBySprint[s.id]) ? 'Existem tarefas não concluídas' : '' %>">Encerrar</button>
+            </form>
+            
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<% if (currentUser && currentUser.role==='Admin') { %>
+  <h2 class="title is-5">Criar Sprint</h2>
+  <form method="post" action="/sprints" class="box">
+    <div class="field">
+      <label class="label">Nome</label>
+      <input class="input" name="name" required />
+    </div>
+    <div class="field">
+      <label class="label">Tarefas</label>
+      <div class="select is-multiple is-fullwidth">
+        <select multiple size="8" name="taskIds">
+          <% (tasks||[]).forEach(t => { %>
+            <option value="<%= t.id %>"><%= t.title %> - <%= t.status %></option>
+          <% }) %>
+        </select>
+      </div>
+      <p class="help">Selecione pelo menos 1 tarefa</p>
+    </div>
+    <div class="field">
+      <button class="button is-primary" type="submit">Criar</button>
+    </div>
+  </form>
+<% } %>
+
+
